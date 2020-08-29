@@ -43,6 +43,9 @@
          $pc[31:0] = >>1$reset ? 32'h0 : >>1$inc_pc;
       @1
          $inc_pc[31:0] = $pc[31:0] + 32'h4;
+         $instr[31:0] = $imem_rd_data[31:0];
+         $imem_rd_en = !$reset;
+         $imem_rd_addr[M4_IMEM_INDEX_CNT-1:0] = $pc[M4_IMEM_INDEX_CNT+1:2];
 
 
 
