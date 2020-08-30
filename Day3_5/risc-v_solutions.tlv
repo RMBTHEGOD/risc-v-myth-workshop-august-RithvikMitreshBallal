@@ -113,6 +113,14 @@
          $rf_wr_en = $rd == '0 ? 1'b0 : $rd_valid;
          $rf_wr_index[4:0] = $rd;
          $rf_wr_data[31:0] = $result[31:0];
+         //Branch condition check
+         $taken_br = $is_beq ? $src1_value == $src2_value :
+                     $is_bne ? $src1_value != $src2_value :
+                     $is_bltu ? $src1_value < $src2_value :
+                     $is_bgeu ? $src1_value >= $src2_value :
+                     $is_blt ? ($src1_value < $src2_value) ^ ($src1_value[31] != $src_value[31]) :
+                     $is_bge ? ($src1_value >= $src2_value) ^ ($src1_value[31] != $src_value[31]) :
+                     1'b0;
    // Assert these to end simulation (before Makerchip cycle limit).
    *passed = *cyc_cnt > 40;
    *failed = 1'b0;
