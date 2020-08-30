@@ -47,15 +47,8 @@
          //Fetching Instructions
          $reset = *reset;
          $pc[31:0] = >>1$reset ? 32'h0 : 
-                     >>3$valid_taken_br ? >>3$br_tgt_pc :
-                     >>3$inc_pc;
-         $start =  >>1$reset ? 
-                   !$reset ? 1'b1 :
-                   1'b0:
-                   1'b0;
-         $valid = $reset ? 1'b0 :
-                  ($start || >>3$valid) ? 1'b1 :
-                  1'b0;
+                     >>3$taken_br ? >>3$br_tgt_pc :
+                     >>1$inc_pc;
       @1
          $inc_pc[31:0] = $pc[31:0] + 32'h4;
          $instr[31:0] = $imem_rd_data[31:0];
@@ -78,7 +71,7 @@
                       $is_u_instr ? { $instr[31], $instr[30:20], $instr[19:12], 12'b0} :
                       $is_j_instr ? { {12{$instr[31]}}, $instr[19:12], $instr[20], $instr[30:25], $instr[24:21], 1'b0} :
                       32'b0;
-         $rd_valid = $valid & ($is_i_instr || $is_r_instr || $is_u_instr || $is_j_instr);
+         $rd_valid = $is_i_instr || $is_r_instr || $is_u_instr || $is_j_instr;
          $funct7_valid = $is_r_instr;
          $funct3_valid = $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr;
          $rs1_valid = $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr;
@@ -113,7 +106,7 @@
          $rf_rd_en2 = $rs2_valid;
          $rf_rd_index1[4:0] = $rs1;
          $rf_rd_index2[4:0] = $rs2;
-          $src1_value[31:0] = ((>>1$rf_wr_index == $rf_rd_index1) && (>>1$rf_wr_en)) ? >>1$result :
+         $src1_value[31:0] = ((>>1$rf_wr_index == $rf_rd_index1) && (>>1$rf_wr_en)) ? >>1$result :
                              $rf_rd_data1;
          $src2_value[31:0] = >>1$rd == $rs2 ? >>1$result :
                              $rf_rd_data2;
@@ -125,9 +118,13 @@
                          $is_add ? $src1_value + $src2_value :
                          32'bx;
          //Register File Write
-         $rf_wr_en = $rd == '0 ? 1'b0 : $rd_valid;
+         $rf_wr_en = $rd == '0 ? 1'b0 : 
+                     $valid && $rd_valid;
          $rf_wr_index[4:0] = $rd;
          $rf_wr_data[31:0] = $result[31:0];
+         
+         //Branch predict Valid signal
+         $valid = !(>>1$taken_br | >>2$taken_br);
          //Branch condition check
          $taken_br = $is_beq ? ($src1_value == $src2_value) :
                      $is_bne ? ($src1_value != $src2_value) :
@@ -136,7 +133,6 @@
                      $is_blt ? (($src1_value < $src2_value) ^ ($src1_value[31] != $src2_value[31])) :
                      $is_bge ? (($src1_value >= $src2_value) ^ ($src1_value[31] != $src2_value[31])) :
                      1'b0;
-         $valid_taken_br = $valid && $taken_br;
    // Assert these to end simulation (before Makerchip cycle limit).
    *passed = *cyc_cnt > 40;
    *failed = 1'b0;
