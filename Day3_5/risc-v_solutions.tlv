@@ -44,10 +44,11 @@
       //       other than those specifically expected in the labs. You'll get strange errors for these.
    |cpu
       @0
+         //Fetching Instructions
          $reset = *reset;
          $pc[31:0] = >>1$reset ? 32'h0 : 
-                     >>1$taken_br ? >>1$br_tgt_pc :
-                     >>1$inc_pc;
+                     >>3$valid_taken_br ? >>3$br_tgt_pc :
+                     >>3$inc_pc;
          $start =  >>1$reset ? 
                    !$reset ? 1'b1 :
                    1'b0:
@@ -56,7 +57,6 @@
                   ($start || >>3$valid) ? 1'b1 :
                   1'b0;
       @1
-         //Fetching Instructions
          $inc_pc[31:0] = $pc[31:0] + 32'h4;
          $instr[31:0] = $imem_rd_data[31:0];
          $imem_rd_en = !$reset;
@@ -78,7 +78,7 @@
                       $is_u_instr ? { $instr[31], $instr[30:20], $instr[19:12], 12'b0} :
                       $is_j_instr ? { {12{$instr[31]}}, $instr[19:12], $instr[20], $instr[30:25], $instr[24:21], 1'b0} :
                       32'b0;
-         $rd_valid = $is_i_instr || $is_r_instr || $is_u_instr || $is_j_instr;
+         $rd_valid = $valid & ($is_i_instr || $is_r_instr || $is_u_instr || $is_j_instr);
          $funct7_valid = $is_r_instr;
          $funct3_valid = $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr;
          $rs1_valid = $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr;
@@ -107,7 +107,7 @@
          $is_add = $dec_bits ==? 11'b0_000_0110011;
          //Quiet down the warnings. Its a system verilog macros
          `BOGUS_USE($is_beq $is_bne $is_blt $is_bge $is_bltu $is_bgeu $is_addi $is_add)
-         //Register File Read
+         //Register File Read 
          $rf_rd_en1 = $rs1_valid;
          $rf_rd_en2 = $rs2_valid;
          $rf_rd_index1[4:0] = $rs1;
@@ -123,13 +123,14 @@
          $rf_wr_index[4:0] = $rd;
          $rf_wr_data[31:0] = $result[31:0];
          //Branch condition check
-         $taken_br = $is_beq ? $src1_value == $src2_value :
-                     $is_bne ? $src1_value != $src2_value :
-                     $is_bltu ? $src1_value < $src2_value :
-                     $is_bgeu ? $src1_value >= $src2_value :
-                     $is_blt ? ($src1_value < $src2_value) ^ ($src1_value[31] != $src2_value[31]) :
-                     $is_bge ? ($src1_value >= $src2_value) ^ ($src1_value[31] != $src2_value[31]) :
+         $taken_br = $is_beq ? ($src1_value == $src2_value) :
+                     $is_bne ? ($src1_value != $src2_value) :
+                     $is_bltu ? ($src1_value < $src2_value) :
+                     $is_bgeu ? ($src1_value >= $src2_value) :
+                     $is_blt ? (($src1_value < $src2_value) ^ ($src1_value[31] != $src2_value[31])) :
+                     $is_bge ? (($src1_value >= $src2_value) ^ ($src1_value[31] != $src2_value[31])) :
                      1'b0;
+         $valid_taken_br = $valid && $taken_br;
          //Branch target pc calculation
          ?$taken_br
             $br_tgt_pc[31:0] = $pc + $imm;
