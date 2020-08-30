@@ -48,6 +48,13 @@
          $pc[31:0] = >>1$reset ? 32'h0 : 
                      >>1$taken_br ? >>1$br_tgt_pc :
                      >>1$inc_pc;
+         $start =  >>1$reset ? 
+                   !$reset ? 1'b1 :
+                   1'b0:
+                   1'b0;
+         $valid = $reset ? 1'b0 :
+                  ($start || >>3$valid) ? 1'b1 :
+                  1'b0;
       @1
          //Fetching Instructions
          $inc_pc[31:0] = $pc[31:0] + 32'h4;
