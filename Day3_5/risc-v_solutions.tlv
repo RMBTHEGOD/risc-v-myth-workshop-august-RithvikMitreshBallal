@@ -106,7 +106,8 @@
          $is_addi = $dec_bits ==? 11'bx_000_0010011;
          $is_add = $dec_bits ==? 11'b0_000_0110011;
          //Quiet down the warnings. Its a system verilog macros
-         `BOGUS_USE($is_beq $is_bne $is_blt $is_bge $is_bltu $is_bgeu $is_addi $is_add)
+         `BOGUS_USE($is_beq $is_bne $is_blt $is_bge $is_bltu $is_bgeu $is_addi $is_add);
+      @2 
          //Register File Read 
          $rf_rd_en1 = $rs1_valid;
          $rf_rd_en2 = $rs2_valid;
@@ -114,6 +115,9 @@
          $rf_rd_index2[4:0] = $rs2;
          $src1_value[31:0] = $rf_rd_data1;
          $src2_value[31:0] = $rf_rd_data2;
+         //Branch target pc calculation
+         $br_tgt_pc[31:0] = $pc + $imm;
+      @3
          //ALU Operation
          $result[31:0] = $is_addi ? $src1_value + $imm :
                          $is_add ? $src1_value + $src2_value :
@@ -131,9 +135,6 @@
                      $is_bge ? (($src1_value >= $src2_value) ^ ($src1_value[31] != $src2_value[31])) :
                      1'b0;
          $valid_taken_br = $valid && $taken_br;
-         //Branch target pc calculation
-         ?$taken_br
-            $br_tgt_pc[31:0] = $pc + $imm;
    // Assert these to end simulation (before Makerchip cycle limit).
    *passed = *cyc_cnt > 40;
    *failed = 1'b0;
