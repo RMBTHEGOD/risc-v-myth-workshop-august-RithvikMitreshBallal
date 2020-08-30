@@ -73,9 +73,18 @@
          $rs1[4:0] = $instr[19:15];
          $rs2[4:0] = $instr[24:20];
          $opcode[6:0] = $instr[6:0];
-     
-
-   
+         ?$rd_valid
+            $rd[4:0] = $instr[11:7];
+         ?$funct7_valid
+            $funct7[6:0] = $instr[31:25];
+         ?$funct3_valid
+            $funct3[2:0] = $instr[14:12];
+         ?$rs1_valid
+            $rs1[4:0] = $instr[19:15];
+         ?$rs2_valid
+            $rs2[4:0] = $instr[24:20];
+         ?$opcode_valid
+            $opcode[6:0] = $instr[6:0];
    // Assert these to end simulation (before Makerchip cycle limit).
    *passed = *cyc_cnt > 40;
    *failed = 1'b0;
