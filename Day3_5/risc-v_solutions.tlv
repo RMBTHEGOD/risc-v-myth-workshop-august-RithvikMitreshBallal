@@ -98,8 +98,9 @@
          $is_bgeu = $dec_bits ==? 11'bx_111_1100011;
          $is_addi = $dec_bits ==? 11'bx_000_0010011;
          $is_add = $dec_bits ==? 11'b0_000_0110011;
+         $is_load = $dec_bits ==? 11'bx_xxx_0000011;
          //Quiet down the warnings. Its a system verilog macros
-         `BOGUS_USE($is_beq $is_bne $is_blt $is_bge $is_bltu $is_bgeu $is_addi $is_add);
+         `BOGUS_USE($is_beq $is_bne $is_blt $is_bge $is_bltu $is_bgeu $is_addi $is_add $is_load);
       @2 
          //Register File Read 
          $rf_rd_en1 = $rs1_valid;
