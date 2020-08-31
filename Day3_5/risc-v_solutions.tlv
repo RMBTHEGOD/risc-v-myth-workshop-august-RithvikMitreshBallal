@@ -32,7 +32,8 @@
    m4_asm(ADDI, r13, r13, 1)            // Increment intermediate register by 1
    m4_asm(BLT, r13, r12, 1111111111000) // If a3 is less than a2, branch to label named <loop>
    m4_asm(ADD, r10, r14, r0)            // Store final result to register a0 so that it can be read by main program
-   
+   m4_asm(SW, r0, r10, 10000)           // Stores the final result into memory location 16
+   m4_asm(LW, r17, r0, 10000)           // Reads the stored results from memory location 16 and load it into r17
    // Optional:
    // m4_asm(JAL, r7, 00000000000000000000) // Done. Jump to itself (infinite loop). (Up to 20-bit signed immediate plus implicit 0 bit (unlike JALR) provides byte address; last immediate bit should also be 0)
    m4_define_hier(['M4_IMEM'], M4_NUM_INSTRS)
@@ -47,8 +48,8 @@
          //Fetching Instructions
          $reset = *reset;
          $pc[31:0] = >>1$reset ? 32'h0 : 
-                     >>3$is_load ? >>3$inc_pc :
-                     >>3$taken_br ? >>3$br_tgt_pc :
+                     >>3$valid_load ? >>3$inc_pc :
+                     (>>3$valid && >>3$taken_br) ? >>3$br_tgt_pc :
                      >>1$inc_pc;
       @1
          $inc_pc[31:0] = $pc[31:0] + 32'h4;
@@ -90,6 +91,8 @@
             $rs2[4:0] = $instr[24:20];
          ?$opcode_valid
             $opcode[6:0] = $instr[6:0];
+      @2 
+         
          $dec_bits[10:0] = {$funct7[5],$funct3,$opcode};
          $is_beq = $dec_bits ==? 11'bx_000_1100011;
          $is_bne = $dec_bits ==? 11'bx_001_1100011;
@@ -122,9 +125,6 @@
          $is_or = $dec_bits ==? 11'b0_110_0110011;
          $is_and = $dec_bits ==? 11'b0_111_0110011;
          $is_store = $dec_bits ==? 11'bx_xxx_0100011;
-         //Quiet down the warnings. Its a system verilog macros
-         `BOGUS_USE($is_beq $is_bne $is_blt $is_bge $is_bltu $is_bgeu $is_addi $is_add $is_load $is_lui $is_auipc $is_jal $is_jalr $is_slti $is_sltiu $is_xori $is_ori $is_andi $is_slli $is_srli $is_srai $is_sub $is_sll $is_slt $is_sltu $is_xor $is_srl $is_sra $is_or $is_and );
-      @2 
          //Register File Read 
          $rf_rd_en1 = $rs1_valid;
          $rf_rd_en2 = $rs2_valid;
@@ -136,11 +136,13 @@
                              $rf_rd_data2;
          //Branch target pc calculation
          $br_tgt_pc[31:0] = $pc + $imm;
+         //Quiet down the warnings. Its a system verilog macros
+         `BOGUS_USE($is_beq $is_bne $is_blt $is_bge $is_bltu $is_bgeu $is_addi $is_add $is_load $is_lui $is_auipc $is_jal $is_jalr $is_slti $is_sltiu $is_xori $is_ori $is_andi $is_slli $is_srli $is_srai $is_sub $is_sll $is_slt $is_sltu $is_xor $is_srl $is_sra $is_or $is_and );
       @3
          //ALU Operation
          //Getting intermidate result signals for sltu and sltiu
-         $sltu_rslt = $src1_value < $src2_value;
-         $sltiu_rslt = $src1_value < $imm;
+         $sltu_rslt[31:0] = $src1_value < $src2_value;
+         $sltiu_rslt[31:0] = $src1_value < $imm;
          
          $result[31:0] = $is_addi ? $src1_value + $imm :
                          $is_add ? $src1_value + $src2_value :
@@ -171,14 +173,14 @@
                          $is_store ? $src1_value + $imm :
                          32'bx;
          //Register File Write
-         $rf_wr_en = $rd == '0 ? 1'b0 : 
-                     ($valid && $rd_valid) || >>2$is_load;
-         $rf_wr_index[4:0] = >>2$is_load? >>2$rd:
+         $rf_wr_en = ($rd != '0 && $valid && $rd_valid) ||>>2$valid_load;
+         $rf_wr_index[4:0] = >>2$valid_load? >>2$rd:
                              $rd;
-         $rf_wr_data[31:0] = >>2$is_load? >>2$ld_data :
+         $rf_wr_data[31:0] = >>2$valid_load ? >>2$ld_data :
                              $result[31:0];
          //Branch predict and load Valid signal
-         $valid = !(>>1$is_load | >>2$is_load | >>1$taken_br | >>2$taken_br);
+         $valid = !(>>1$valid_load | >>2$valid_load | (>>1$valid && >>1$taken_br ) | (>>2$valid && >>2$taken_br));
+         $valid_load = $valid && $is_load;
          //Branch condition check
          $taken_br = $is_beq ? ($src1_value == $src2_value) :
                      $is_bne ? ($src1_value != $src2_value) :
@@ -191,12 +193,14 @@
          //Connect the dmem with address bits
          $dmem_addr[3:0] = $result[5:2];
          $dmem_wr_en = $valid && $is_store;
-         $dmem_rd_en = $valid && $is_load;
+         $dmem_rd_en = $is_load;
          $dmem_wr_data[31:0] = $src2_value;
-   // Assert these to end simulation (before Makerchip cycle limit).
+      @5
+         $ld_data[31:0] = $dmem_rd_data;
+         
    *passed = *cyc_cnt > 40;
    *failed = 1'b0;
-   *passed = |cpu/xreg[10]>>5$value == (1+2+3+4+5+6+7+8+9);
+   *passed = |cpu/xreg[17]>>5$value == (1+2+3+4+5+6+7+8+9);
    // Macro instantiations for:
    //  o instruction memory
    //  o register file
