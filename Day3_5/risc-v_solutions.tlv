@@ -47,6 +47,7 @@
          //Fetching Instructions
          $reset = *reset;
          $pc[31:0] = >>1$reset ? 32'h0 : 
+                     >>3$is_load ? >>3$inc_pc :
                      >>3$taken_br ? >>3$br_tgt_pc :
                      >>1$inc_pc;
       @1
@@ -172,8 +173,8 @@
          $rf_wr_index[4:0] = $rd;
          $rf_wr_data[31:0] = $result[31:0];
          
-         //Branch predict Valid signal
-         $valid = !(>>1$taken_br | >>2$taken_br);
+         //Branch predict and load Valid signal
+         $valid = !(>>1$is_load | >>2$is_load | >>1$taken_br | >>2$taken_br);
          //Branch condition check
          $taken_br = $is_beq ? ($src1_value == $src2_value) :
                      $is_bne ? ($src1_value != $src2_value) :
