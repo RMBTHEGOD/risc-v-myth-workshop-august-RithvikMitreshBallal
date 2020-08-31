@@ -177,7 +177,6 @@
                              $rd;
          $rf_wr_data[31:0] = >>2$is_load? >>2$ld_data :
                              $result[31:0];
-         
          //Branch predict and load Valid signal
          $valid = !(>>1$is_load | >>2$is_load | >>1$taken_br | >>2$taken_br);
          //Branch condition check
@@ -188,6 +187,12 @@
                      $is_blt ? (($src1_value < $src2_value) ^ ($src1_value[31] != $src2_value[31])) :
                      $is_bge ? (($src1_value >= $src2_value) ^ ($src1_value[31] != $src2_value[31])) :
                      1'b0;
+      @4
+         //Connect the dmem with address bits
+         $dmem_addr[3:0] = $result[5:2];
+         $dmem_wr_en = $valid && $is_store;
+         $dmem_rd_en = $valid && $is_load;
+         $dmem_wr_data[31:0] = $src2_value;
    // Assert these to end simulation (before Makerchip cycle limit).
    *passed = *cyc_cnt > 40;
    *failed = 1'b0;
