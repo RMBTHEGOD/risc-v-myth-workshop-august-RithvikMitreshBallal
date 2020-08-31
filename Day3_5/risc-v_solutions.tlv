@@ -134,11 +134,12 @@
                              $rf_rd_data1;
          $src2_value[31:0] = >>1$rd == $rs2 ? >>1$result :
                              $rf_rd_data2;
-         //Branch target pc calculation
-         $br_tgt_pc[31:0] = $pc + $imm;
          //Quiet down the warnings. Its a system verilog macros
          `BOGUS_USE($is_beq $is_bne $is_blt $is_bge $is_bltu $is_bgeu $is_addi $is_add $is_load $is_lui $is_auipc $is_jal $is_jalr $is_slti $is_sltiu $is_xori $is_ori $is_andi $is_slli $is_srli $is_srai $is_sub $is_sll $is_slt $is_sltu $is_xor $is_srl $is_sra $is_or $is_and );
       @3
+         //Branch target pc calculation
+         $br_tgt_pc[31:0] = $is_jalr? $src1_value +$imm :
+                            $pc + $imm;
          //ALU Operation
          //Getting intermidate result signals for sltu and sltiu
          $sltu_rslt[31:0] = $src1_value < $src2_value;
@@ -181,13 +182,15 @@
          //Branch predict and load Valid signal
          $valid = !(>>1$valid_load | >>2$valid_load | (>>1$valid && >>1$taken_br ) | (>>2$valid && >>2$taken_br));
          $valid_load = $valid && $is_load;
-         //Branch condition check
+         //Conditional Branch and unconditional branch condition check
          $taken_br = $is_beq ? ($src1_value == $src2_value) :
                      $is_bne ? ($src1_value != $src2_value) :
                      $is_bltu ? ($src1_value < $src2_value) :
                      $is_bgeu ? ($src1_value >= $src2_value) :
                      $is_blt ? (($src1_value < $src2_value) ^ ($src1_value[31] != $src2_value[31])) :
                      $is_bge ? (($src1_value >= $src2_value) ^ ($src1_value[31] != $src2_value[31])) :
+                     $is_jal ? 1'b1 :
+                     $is_jalr ? 1'b1 :
                      1'b0;
       @4
          //Connect the dmem with address bits
