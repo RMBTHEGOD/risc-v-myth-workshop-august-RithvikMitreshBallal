@@ -121,6 +121,7 @@
          $is_sra = $dec_bits ==? 11'b1_101_0110011;
          $is_or = $dec_bits ==? 11'b0_110_0110011;
          $is_and = $dec_bits ==? 11'b0_111_0110011;
+         $is_store = $dec_bits ==? 11'bx_xxx_0100011;
          //Quiet down the warnings. Its a system verilog macros
          `BOGUS_USE($is_beq $is_bne $is_blt $is_bge $is_bltu $is_bgeu $is_addi $is_add $is_load $is_lui $is_auipc $is_jal $is_jalr $is_slti $is_sltiu $is_xori $is_ori $is_andi $is_slli $is_srli $is_srai $is_sub $is_sll $is_slt $is_sltu $is_xor $is_srl $is_sra $is_or $is_and );
       @2 
@@ -166,12 +167,16 @@
                          $is_srai ? { {32{$src1_value[31]}}, $src1_value} >> $imm[4:0] :
                          $is_or ? $src1_value | $src2_value :
                          $is_and ? $src1_value & $src2_value :
+                         $is_load ? $src1_value + $imm :
+                         $is_store ? $src1_value + $imm :
                          32'bx;
          //Register File Write
          $rf_wr_en = $rd == '0 ? 1'b0 : 
-                     $valid && $rd_valid;
-         $rf_wr_index[4:0] = $rd;
-         $rf_wr_data[31:0] = $result[31:0];
+                     ($valid && $rd_valid) || >>2$is_load;
+         $rf_wr_index[4:0] = >>2$is_load? >>2$rd:
+                             $rd;
+         $rf_wr_data[31:0] = >>2$is_load? >>2$ld_data :
+                             $result[31:0];
          
          //Branch predict and load Valid signal
          $valid = !(>>1$is_load | >>2$is_load | >>1$taken_br | >>2$taken_br);
